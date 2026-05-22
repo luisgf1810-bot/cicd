@@ -1,0 +1,20 @@
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: mycluster
+servers: 1
+agents: 2
+registries:
+  use:
+    - registry.localhost:5000
+  config: registries.yaml
+kubeAPI:
+  hostPort: "6443"
+image: rancher/k3s:latest
+ports:
+  - port: 1443:443
+    nodeFilters:
+      - loadbalancer
+  - port: 1080:80
+    nodeFilters:
+      - loadbalancer
