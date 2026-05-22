@@ -5,9 +5,16 @@ metadata:
 servers: 1
 agents: 2
 registries:
-  use:
-    - registry.localhost:5000
-  config: registries.yaml
+  config: | 
+    mirrors:
+      harbor.local:
+        endpoint:
+          - https://harbor.local
+    configs:
+      harbor.local:
+        auth:
+          username: admin
+          password: admin
 kubeAPI:
   hostPort: "6443"
 image: rancher/k3s:latest

@@ -1,4 +1,4 @@
 mirrors:
-  "localhost:5000":
+  "harbor.local:8080":
     endpoint:
-      - http://localhost:5000
+      - http://harbor.local:8080
