@@ -1,7 +1,7 @@
 # Installation and Configuration 
 
 
-## Install k3d and kubectl 
+## Install k3d and kubectl and helm
 
 Install using _install _k3d.sh__ and __install_kubectl.sh__ files.
 
@@ -37,6 +37,13 @@ Basic Commands (Intermediate):
   delete          Delete resources by file names, stdin, resources and names, or by resources and label selector
 ```
 
+```
+sudo apt-get install curl gpg apt-transport-https --yes
+curl -fsSL https://packages.buildkite.com/helm-linux/helm-debian/gpgkey | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
+echo "deb [signed-by=/usr/share/keyrings/helm.gpg] https://packages.buildkite.com/helm-linux/helm-debian/any/ any main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
+sudo apt-get update
+sudo apt-get install helm
+```
 
 ## Create K8s Cluster using k3d tool
 

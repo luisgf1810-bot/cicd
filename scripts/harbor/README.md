@@ -1,47 +1,107 @@
-# Installation and Configuration (Simplified Example using Docker Compose):
+# Prepare host/docker configuration
 
-## Download __docker-compose.yml__ and __harbor.yml__:
+## Add insecure-registry to Docker
 
-Download the necessary configuration files from the Harbor release page on GitHub. Look for the __docker-compose.yml__ and __harbor.yml.tmpl__ (rename this to __harbor.yml__ after customizing).
+Update Docker Configuration
 
-## Customize harbor.yml:
+1. You need to add your Harbor domain or IP address to the insecure-registries list in your Docker daemon configuration.
 
-Edit the __harbor.yml__ file to configure settings like hostname, port, data volume paths, and database passwords.
+Open /etc/docker/daemon.json (create it if it doesn't exist).
 
-```yaml
-hostname: harbor.local
-# http related config
-http:
-  # port for http, default is 80. If https enabled, this port will redirect to https port
-  port: 8080
-```
-and add it to hosts file.
-
-Comment ssl configuration to use it without certificates:
-
-```yaml
-# https related config
-#https:
-  # https port for harbor, default is 443
-  #port: 443
-  # The path of cert and key files for nginx
-  #certificate: /your/certificate/path
-  #private_key: /your/private/key/path
-  # enable strong ssl ciphers (default: false)
-  # strong_ssl_ciphers: false
+```json
+{
+  "insecure-registries": ["core.harbor.domain:1080"]
+}
 ```
 
+This domain and port values will be used to config Harbor access on the localhost (docker port mapping) and the k3d cluster(loadbalancer and ingress rule).
+
+The domain core.harbor.domain hast to be configured (1267.0.0.1) in /etc/hosts.
+
+2. Restart DockerFor the changes to take effect, you must restart the Docker service.
+
+```
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+```
+
+3.  Verify the Configuration with the command __docker info__
 
 
-Run the following command in the directory containing __docker-compose.yml__ and __harbor.yml__ :
+```
+...
+Experimental: false
+Insecure Registries:
+core.harbor.domain:1080
+::1/128
+127.0.0.0/8
+Live Restore Enabled: false
+...
+```
 
-    docker-compose up -d
+# Installation and Configuration (using helm tool):
 
-This will download and start all the necessary Docker containers for Harbor.
+## Download/Update repo and fetch chart values
+
+helm repo add harbor https://helm.goharbor.io
+helm repo update
+helm fetch harbor/harbor --untar
+
+
+## Customize values.yml:
+
+Edit the __values.yml__ file to configure settings like ingress, externalurl, etc.
+
+```yaml
+expose:
+  # Set how to expose the service. Set the type as "ingress", "clusterIP", "nodePort", "loadBalancer" or "route"
+  # and fill the information in the corresponding section
+  type: ingress
+  tls:
+    # Enable TLS or not.
+    # Delete the "ssl-redirect" annotations in "expose.ingress.annotations" when TLS is disabled and "expose.type" is "ingress"
+    # Note: if the "expose.type" is "ingress" and TLS is disabled,
+    # the port must be included in the command when pulling/pushing images.
+    # Refer to https://github.com/goharbor/harbor/issues/5291 for details.
+    enabled: false
+  ... 
+  ingress:
+    hosts:
+      core: core.harbor.domain
+    # set to the type of ingress controller if it has specific requirements.
+    # leave as `default` for most ingress controllers.
+  
+# If Harbor is deployed behind the proxy, set it as the URL of proxy
+externalURL: http://core.harbor.domain
+```
+
+in this case we use ingress type, with an external url with a domain name mapped to 127.0.0.1.
+
+The loadbalancer of the __k3d cluster__ is mapping 1080 to 80 for harbor.
+```
+image: rancher/k3s:latest
+ports:
+  - port: 1443:443
+    nodeFilters:
+      - loadbalancer
+  - port: 1080:80
+    nodeFilters:
+      - loadbalancer
+  - port: 8080:8080
+    nodeFilters:
+      - loadbalancer
+```
+
+## Deploy Harbor with helm tool
+
+```
+helm install my-harbor harbor/harbor   --namespace harbor   --create-namespace   --values values.yaml
+```
+
 
 ## Access Harbor:
 
-Open your web browser and navigate to the configured hostname (e.g., https://harbor.local:8080). Log in with the default credentials __(admin/Harbor12345)__. You should change these credentials immediately.
+Open your web browser and navigate to the configured hostname (e.g., http://core.harbor.domain:1080). Log in with the default credentials __(admin/Harbor12345)__. You should change these credentials immediately.
 
 
 
@@ -58,50 +118,22 @@ In the Harbor UI, create a new project (e.g., myproject). Projects provide a nam
 
 
 
-## Add isecure-registry to Docker
 
-Update Docker Configuration
-
-1. You need to add your Harbor domain or IP address to the insecure-registries list in your Docker daemon configuration.
-
-Open /etc/docker/daemon.json (create it if it doesn't exist).
-
-```json
-{
-  "insecure-registries": ["your-harbor-domain-or-ip:port"]
-}
-```
-
-Replace your-harbor-domain-or-ip:port with your actual Harbor address, e.g., 192.168.1.100:80 or harbor.local.
-
-
-2. Restart DockerFor the changes to take effect, you must restart the Docker service.
-
-```
-sudo systemctl daemon-reload
-sudo systemctl restart docker
-```
-
-3.  Verify the Configuration with the command __docker info__
-
-
-```
-...
-Experimental: false
-Insecure Registries:
-harbor.local:8080
-::1/128
-127.0.0.0/8
-Live Restore Enabled: false
-...
-```
 
 
 ## Configure Docker to Use Harbor:
 
-Log in to the Harbor registry using the Docker CLI:
+Log in to the Harbor registry using the docker cli:
 ```
-docker login harbor.example.com
+luis@pcdev:~/Develop/movi/cicd/scripts/harbor/harbor$ docker login core.harbor.domain:1080
+Username: admin
+Password: 
+
+WARNING! Your credentials are stored unencrypted in '/home/luis/.docker/config.json'.
+Configure a credential helper to remove this warning. See
+https://docs.docker.com/go/credential-store/
+
+Login Succeeded
 ```
 Enter your username and password.
 
@@ -109,24 +141,13 @@ Enter your username and password.
 
 Tag your Docker image with the registry hostname, project name, and repository name:
 ```
-docker tag archlinux:latest harbor.local:8080/myproject/archlinux:latest
+docker tag archlinux:latest core.harbor.domain:1080/myproject/archlinux:latest
 ```
 
 
 ## Push the image to the Harbor registry:
 ```
-docker push harbor.local:8080/myproject/archlinux:latest
+docker push core.harbor.domain:1080/myproject/archlinux:latest
 ```
 
 ![Screenshot](../../images/harbor.png)
-
-
-
-
-
-## Pull Images:
-
-Pull images from the Harbor registry using the full image name:
-```
-docker pull harbor.local:8080/myproject/archlinux:latest
-```

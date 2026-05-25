@@ -15,3 +15,6 @@ spec:
       containers:
       - name: my-app-container
         image: harbor.local:8080/myproject/archlinux:latest
+
+      imagePullSecrets:
+      - name: testapp

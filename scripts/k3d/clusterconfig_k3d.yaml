@@ -4,17 +4,6 @@ metadata:
   name: mycluster
 servers: 1
 agents: 2
-registries:
-  config: | 
-    mirrors:
-      harbor.local:
-        endpoint:
-          - https://harbor.local
-    configs:
-      harbor.local:
-        auth:
-          username: admin
-          password: admin
 kubeAPI:
   hostPort: "6443"
 image: rancher/k3s:latest
@@ -23,5 +12,8 @@ ports:
     nodeFilters:
       - loadbalancer
   - port: 1080:80
+    nodeFilters:
+      - loadbalancer
+  - port: 8080:8080
     nodeFilters:
       - loadbalancer

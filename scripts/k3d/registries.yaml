@@ -1,4 +1,0 @@
-mirrors:
-  "harbor.local:8080":
-    endpoint:
-      - http://harbor.local:8080
