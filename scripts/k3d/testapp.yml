@@ -1,20 +1,21 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: my-app-deployment
+  name: nginx-test-registry
+  labels:
+    app: nginx-test-registry
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: my-app
+      app: nginx-test-registry
   template:
     metadata:
       labels:
-        app: my-app
+        app: nginx-test-registry
     spec:
       containers:
-      - name: my-app-container
-        image: harbor.local:8080/myproject/archlinux:latest
-
-      imagePullSecrets:
-      - name: testapp
+      - name: nginx-test-registry
+        image: k3d-myregistry.local:12345/nginx:latest
+        ports:
+        - containerPort: 80

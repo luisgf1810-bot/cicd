@@ -1,9 +1,9 @@
 # Installation and Configuration 
 
 
-## Install k3d and kubectl and helm
+## Install k3d, kubectl and helm
 
-Install using _install _k3d.sh__ and __install_kubectl.sh__ files.
+Install using __install _k3d.sh__ , __install_kubectl.sh__ and __install_helm.sh__ files.
 
 ```
 luis@pcdev:~/Develop/movi/cicd/scripts/k3d$ ./install_k3d.sh 
@@ -45,9 +45,10 @@ sudo apt-get update
 sudo apt-get install helm
 ```
 
-## Create K8s Cluster using k3d tool
 
-Change k8s cluster settings (nodes, images, etc) on the yaml file.
+## Create K8s Cluster/Registry using createcluster_k3d.sh script
+
+Change k8s cluster settings (nodes, images, etc) using the yaml file __clusterconfig_k3d.yaml.__.
 
 ```yaml
 acleapiVersion: k3d.io/v1alpha5
@@ -56,10 +57,6 @@ metadata:
   name: mycluster
 servers: 1
 agents: 2
-registries:
-  use:
-    - harbor.local:8080
-  config: registries.yaml
 kubeAPI:
   hostPort: "6443"
 image: rancher/k3s:latest
@@ -72,8 +69,8 @@ ports:
       - loadbalancer
 ```
 
+then execute __createcluster_k3d.sh__ :
 
-Create the k8s cluster using __createcluster_k3d.sh__ using the configuration file __clusterconfig_k3d.yaml.__
 ```
 INFO[0000] portmapping '1443:443' targets the loadbalancer: defaulting to [servers:*:proxy agents:*:proxy] 
 INFO[0000] portmapping '1080:80' targets the loadbalancer: defaulting to [servers:*:proxy agents:*:proxy] 
@@ -134,3 +131,28 @@ kube-system   traefik-6f986b958c-9trcw                  1/1     Running     0   
 
 ## Test Harbor registry and k8 connectivity
 
+Using the file __testapp.yml__ check the k8 connectivity with the registry.
+
+First, pull, tag and push the image to the registry:
+
+```
+docker pull nginx:latest
+docker tag nginx:latest k3d-myregistry.local:12345/nginx:latest
+docker push k3d-myregistry.local:12345/nginx:latest
+```
+
+Then apply the configuration:
+
+
+```
+kubectl apply -f testapp.yml 
+
+```
+
+and verify the pod was created:
+
+```
+luis@pcdev:~/Develop/movi/cicd/scripts/k3d$ kubectl get po
+NAME                                   READY   STATUS    RESTARTS   AGE
+nginx-test-registry-675455fb49-l9f87   1/1     Running   0          2s
+```
