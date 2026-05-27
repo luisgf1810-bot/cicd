@@ -1,5 +1,3 @@
-  sudo apt-get update
-  sudo apt-get install helm
   kubectl create ns cicd
   cd argo-helm/charts/argocd-cd
   helm dependency up
