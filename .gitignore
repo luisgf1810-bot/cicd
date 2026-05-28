@@ -1,3 +1,4 @@
 scripts/harbor/harbor
 scripts/harbor/*.tgz
 scripts/gitea/data
+scripts/argocd/argocd
