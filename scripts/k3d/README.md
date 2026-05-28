@@ -1,5 +1,10 @@
 # Installation and Configuration 
 
+## Prepare localhost
+
+Add an entry to __/etc/hosts__ with __127.0.0.1 k3-myregistry.local__ for the image registry.
+
+
 
 ## Install k3d, kubectl and helm
 
@@ -38,13 +43,43 @@ Basic Commands (Intermediate):
 ```
 
 ```
-sudo apt-get install curl gpg apt-transport-https --yes
-curl -fsSL https://packages.buildkite.com/helm-linux/helm-debian/gpgkey | gpg --dearmor | sudo tee /usr/share/keyrings/helm.gpg > /dev/null
-echo "deb [signed-by=/usr/share/keyrings/helm.gpg] https://packages.buildkite.com/helm-linux/helm-debian/any/ any main" | sudo tee /etc/apt/sources.list.d/helm-stable-debian.list
-sudo apt-get update
-sudo apt-get install helm
+enzo@enzo:~/Develop/cicd/scripts/k3d$ sudo ./install_helm.sh
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+curl is already the newest version (8.18.0-1ubuntu2.1).
+gpg is already the newest version (2.4.8-4ubuntu3).
+apt-transport-https is already the newest version (3.2.0).
+Solving dependencies... Done
+The following package was automatically installed and is no longer required:
+  grub-pc-bin
+Use 'sudo apt autoremove' to remove it.
+0 upgraded, 0 newly installed, 0 to remove and 37 not upgraded.
+deb [signed-by=/usr/share/keyrings/helm.gpg] https://packages.buildkite.com/helm-linux/helm-debian/any/ any main
+Get:1 file:/var/cuda-repo-ubuntu2404-13-2-local  InRelease [1,572 B]
+Get:1 file:/var/cuda-repo-ubuntu2404-13-2-local  InRelease [1,572 B]
+Hit:2 http://security.ubuntu.com/ubuntu resolute-security InRelease      
+Hit:3 https://packages.microsoft.com/repos/code stable InRelease         
+Hit:4 https://dl.google.com/linux/chrome-stable/deb stable InRelease     
+Hit:5 http://archive.ubuntu.com/ubuntu resolute InRelease           
+Hit:6 http://archive.ubuntu.com/ubuntu resolute-updates InRelease
+Hit:8 http://archive.ubuntu.com/ubuntu resolute-backports InRelease
+Hit:7 https://packages.buildkite.com/helm-linux/helm-debian/any any InRelease
+Reading package lists... Done
+Reading package lists... Done
+Building dependency tree... Done
+Reading state information... Done
+helm is already the newest version (3.20.0-1).
+Solving dependencies... Done
+The following package was automatically installed and is no longer required:
+  grub-pc-bin
+Use 'sudo apt autoremove' to remove it.
+0 upgraded, 0 newly installed, 0 to remove and 37 not upgraded.
 ```
 
+if kubectl does not work check config file in $HOME/.kube directory.
+
+The commnad __k3d kubeconfig__ get can be used for troubleshooting.
 
 ## Create K8s Cluster/Registry using createcluster_k3d.sh script
 
