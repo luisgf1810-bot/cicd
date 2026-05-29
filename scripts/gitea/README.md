@@ -6,7 +6,6 @@ First, update __/etc/hosts__ with gitea.local domain.
 
 ```
 127.0.0.1 localhost
-127.0.1.1 enzo-Lenovo-YOGA-710-15IKB
 127.0.0.1 k3d-myregistry.local
 127.0.0.1 gitea.local
 
@@ -20,26 +19,12 @@ ff02::2 ip6-allrouters
 ```
 
 then add helm repo and get the configuration values __custom-values.yaml__.
-```
-## @section Gitea
-#
-gitea:
-  ## @param gitea.admin.username Username for the Gitea admin user
-  ## @param gitea.admin.existingSecret Use an existing secret to store admin user credentials
-  ## @param gitea.admin.password Password for the Gitea admin user
-  ## @param gitea.admin.email Email for the Gitea admin user
-  ## @param gitea.admin.passwordMode Mode for how to set/update the admin user password. Options are: initialOnlyNoReset, initialOnlyRequireReset, and keepUpdated
-  admin:
-    # existingSecret: gitea-admin-secret
-    existingSecret:
-    username: admin
-    password: admin
-    email: "gitea@local.domain"
-    passwordMode: keepUpdated
 
-  ## @param gitea.metrics.enabled Enable Gitea metrics
-  ## @param gitea.metrics.token used for `bearer` token authentication on metrics endpoint. If not specified or empty metrics endpoint is public.
-  ## @param gitea.metrics.serviceMo
+
+```
+helm repo add gitea-charts https://dl.gitea.com/charts/
+helm repo update
+helm show values gitea-charts/gitea > custom-values.yaml
 ```
 
 

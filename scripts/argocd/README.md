@@ -1,15 +1,13 @@
 # Installation and Configuration 
 
-Install argocd chart using the commands in the script __install_argocd.sh__.
- 
 First, update __/etc/hosts__ with __argocd.local__ domain.
 
 ```
 127.0.0.1 localhost
-127.0.1.1 enzo-Lenovo-YOGA-710-15IKB
 127.0.0.1 k3d-myregistry.local
 127.0.0.1 gitea.local
 127.0.0.1 argocd.local
+
 
 # The following lines are desirable for IPv6 capable hosts
 ::1     ip6-localhost ip6-loopback

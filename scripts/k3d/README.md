@@ -86,7 +86,7 @@ The commnad __k3d kubeconfig__ get can be used for troubleshooting.
 Change k8s cluster settings (nodes, images, etc) using the yaml file __clusterconfig_k3d.yaml.__.
 
 ```yaml
-acleapiVersion: k3d.io/v1alpha5
+apiVersion: k3d.io/v1alpha5
 kind: Simple
 metadata:
   name: mycluster
@@ -96,10 +96,13 @@ kubeAPI:
   hostPort: "6443"
 image: rancher/k3s:latest
 ports:
-  - port: 1443:443
+  - port: 443:443
     nodeFilters:
       - loadbalancer
-  - port: 1080:80
+  - port: 80:80
+    nodeFilters:
+      - loadbalancer
+  - port: 8080:8080
     nodeFilters:
       - loadbalancer
 ```
@@ -164,7 +167,7 @@ kube-system   traefik-6f986b958c-9trcw                  1/1     Running     0   
 ```
 
 
-## Test Harbor registry and k8 connectivity
+## Test Docker registry and k8 connectivity
 
 Using the file __testapp.yml__ check the k8 connectivity with the registry.
 
