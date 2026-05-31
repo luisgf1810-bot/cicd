@@ -1,0 +1,23 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-test-registry
+  labels:
+    app: nginx-test-registry
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx-test-registry
+  template:
+    metadata:
+      labels:
+        app: nginx-test-registry
+    spec:
+      imagePullSecrets:
+        - name: harbor-credentials
+      containers:
+      - name: nginx-test-registry
+        image: harbor-portal.svc.cluster.local/library/nginx:latest
+        ports:
+        - containerPort: 80

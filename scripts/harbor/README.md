@@ -74,3 +74,51 @@ helm install harbor harbor/harbor -f custom-values.yaml
 
 The default user/pwd is admin/Harbor12345, acces the ui on http://harbor.local.
 
+
+
+# Test Harbor registry and k8 connectivity
+
+Using the file __testapp.yml__ check the k8 connectivity with the registry.
+
+First, pull, tag and push the image to the registry:
+
+```
+docker pull nginx:latest
+docker tag nginx:latest harbor.local/library/nginx:latest
+docker push harbor.local/library/nginx:latest
+```
+
+![Graph Asset](../../images/harbor1.png)
+
+
+
+Then apply the configuration:
+
+
+```
+kubectl apply -f testapp.yml 
+
+```
+
+and verify the pod was created:
+
+```
+luis@pcdev:~/Develop/movi/cicd/scripts/k3d$ kubectl get po
+NAME                                   READY   STATUS    RESTARTS   AGE
+nginx-test-registry-675455fb49-l9f87   1/1     Running   0          2s
+```
+
+
+For troubleshooting, check the internal k8 dns names:
+
+```
+kubectl run dns-validation-test --image=busybox:1.36 --rm -it --restart=Never -- nslookup harbor-registry.default.svc.cluster.local
+Server:         10.43.0.10
+Address:        10.43.0.10:53
+
+Name:   harbor-registry.default.svc.cluster.local
+Address: 10.43.120.234
+
+
+pod "dns-validation-test" deleted from default namespace
+```
