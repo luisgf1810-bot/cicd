@@ -16,6 +16,6 @@ spec:
         pathType: Prefix
         backend:
           service:
-            name: headlamp
+            name: my-headlamp
             port:
               number: 80
