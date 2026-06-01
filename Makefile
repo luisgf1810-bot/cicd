@@ -1,7 +1,8 @@
 
 # Define directories
 HLAMP := scripts/headlamp
-
+K3D := scripts/k3d
+HARBOR := scripts/harbor
 
 help: ## Usage: 'make <target>' where target is: multicluster, up, down, clean.
 	@egrep '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -24,14 +25,13 @@ headlamp:
 	@helm repo update
 	@helm install my-headlamp headlamp/headlamp   --namespace kube-system
 	@kubectl apply -f $(HLAMP)/gitopshl.ingress.yaml
-	@helm upgrade --install my-headlamp headlamp/headlamp -f scripts/headlamp/kubevirt.yaml -n kube-system
+	#@helm upgrade --install my-headlamp headlamp/headlamp -f scripts/headlamp/kubevirt.yaml -n kube-system
 	@kubectl create token my-headlamp --namespace kube-system
 
 portainer:
 	@docker volume create portainer_data
 	@docker run -d -p 8000:8000 -p 7443:9443 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:lts
 	
-
 registry:
 	@k3d registry create myregistry.local --port 12345
 
@@ -113,3 +113,15 @@ multi: kubeconfig-multi
 
 
 multicluster: clean registry multi kubeconfig-multi portainer headlamp ## Create K3s multicluster/registry
+
+setup:	# Install k8 tools and setup local domains
+	#@sh $(K3D)/install_k3d.sh
+	#@sh $(K3D)/install_helm.sh
+	#@sh $(K3D)/install_kubectl.sh
+
+harbor:
+	@kubectl config use-context k3d-gitops
+
+
+
+gitops: harbor gitea argocd # deploy gitops tools
