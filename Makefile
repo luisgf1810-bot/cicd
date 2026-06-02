@@ -3,6 +3,8 @@
 HLAMP := scripts/headlamp
 K3D := scripts/k3d
 HARBOR := scripts/harbor
+GITEA := scripts/gitea
+ARGOCD := scripts/argocd
 
 help: ## Usage: 'make <target>' where target is: multicluster, up, down, clean.
 	@egrep '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -114,14 +116,41 @@ multi: kubeconfig-multi
 
 multicluster: clean registry multi kubeconfig-multi portainer headlamp ## Create K3s multicluster/registry
 
-setup:	# Install k8 tools and setup local domains
+setup:	## Install k8 tools and setup local domains
 	#@sh $(K3D)/install_k3d.sh
 	#@sh $(K3D)/install_helm.sh
 	#@sh $(K3D)/install_kubectl.sh
 
+test:
+	@kubectl config use-context k3d-development
+	@docker pull nginx:latest
+	@docker tag nginx:latest harbor.local/library/nginx:latest
+	@docker login harbor.local -u admin -p Harbor12345 
+	@docker push harbor.local/library/nginx:latest
+	#@kubectl apply -f $(HARBOR)/testapp.yaml
+
 harbor:
 	@kubectl config use-context k3d-gitops
+	@helm repo add harbor https://helm.goharbor.io
+	@helm repo update
+	@helm upgrade --install harbor harbor/harbor -f $(HARBOR)/custom-values.yaml
 
+	
 
+gitea:
+	@kubectl config use-context k3d-gitops
+	@helm repo add gitea-charts https://dl.gitea.com/charts/
+	@helm repo update
+	@helm upgrade --install gitea gitea-charts/gitea -f $(GITEA)/custom-values.yaml
+	@kubectl apply -f $(GITEA)/ingress.yaml
 
-gitops: harbor gitea argocd # deploy gitops tools
+argocd:
+	@helm repo add argo https://argoproj.github.io/argo-helm
+	@helm repo update
+	@helm upgrade --install argocd argo/argo-cd
+	@kubectl patch configmap argocd-cmd-params-cm --type merge -p '{"data":{"server.insecure": "true"}}' 
+	@kubectl patch configmap argocd-cm --type merge -p '{"data":{"url":"https://argocd.local"}}'
+	@kubectl apply -f $(ARGOCD)/ingress.yaml
+	@kubectl -n default get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+
+gitops: harbor gitea argocd ## Deploy gitops tools

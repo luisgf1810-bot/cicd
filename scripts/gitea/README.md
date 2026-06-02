@@ -28,7 +28,7 @@ helm show values gitea-charts/gitea > custom-values.yaml
 ```
 
 
-Disable postgresql ha and valkey ha, so only one instance will be installed and change user/pwd to admin/admin.
+Disable postgresql ha and valkey ha, so only one instance will be installed.
 
 ```
 ...
@@ -69,8 +69,8 @@ gitea:
   admin:
     # existingSecret: gitea-admin-secret
     existingSecret:
-    username: admin
-    password: admin
+    username: gitea_admin
+    password: r8sA8CPHD9!bt6d
     email: "gitea@local.domain"
     passwordMode: keepUpdated
 ```
