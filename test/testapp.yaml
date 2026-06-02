@@ -14,10 +14,9 @@ spec:
       labels:
         app: nginx-test-registry
     spec:
-      imagePullSecrets:
-        - name: harbor-credentials
       containers:
       - name: nginx-test-registry
-        image: harbor-portal.svc.cluster.local/library/nginx:latest
+        image: k3d-myregistry.local:12345/nginx:latest
         ports:
         - containerPort: 80
+      

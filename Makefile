@@ -5,6 +5,8 @@ K3D := scripts/k3d
 HARBOR := scripts/harbor
 GITEA := scripts/gitea
 ARGOCD := scripts/argocd
+REGPORT := 12345
+TEST := test
 
 help: ## Usage: 'make <target>' where target is: multicluster, up, down, clean.
 	@egrep '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -35,7 +37,7 @@ portainer:
 	@docker run -d -p 8000:8000 -p 7443:9443 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:lts
 	
 registry:
-	@k3d registry create myregistry.local --port 12345
+	@k3d registry create myregistry.local --port $(REGPORT)
 
 kubeconfig-multi:
 	@export KUBECONFIG=$$HOME/.kube/k3d-gitops.yaml:$$HOME/.kube/k3d-development.yaml:$HOME/.kube/k3d-production.yaml
@@ -44,7 +46,7 @@ kubeconfig-multi:
 
 
 multi: kubeconfig-multi 
-	@k3d cluster create                                                                  \
+	@k3d cluster create                         		                                 \
 		--servers 1                                                                      \
 		--agents 1                                                                       \
 		--api-port 64432                                                                 \
@@ -53,7 +55,7 @@ multi: kubeconfig-multi
 		--token superSecretToken                                                         \
 		--timeout 60s                                                                    \
 		--port 80:80@loadbalancer:0                                                    	 \
-		--port 443:443@loadbalancer:0                                                    \
+		--port 443:443@loadbalancer:0      \
 		--k3s-arg "--cluster-cidr=10.1.0.0/16@server:0"                                  \
 		--k3s-arg "--service-cidr=10.0.0.0/16@server:0"                                  \
 		--k3s-arg "--etcd-disable-snapshots@server:0"                                    \
@@ -63,11 +65,11 @@ multi: kubeconfig-multi
 		--k3s-node-label tier=server@server:0                                            \
 		--k3s-node-label tier=worker@agent:0                                             \
 		--k3s-node-label worker=a@agent:0                                                \
-		--wait gitops;                                                              \
-																						 \
-	k3d kubeconfig get gitops > $$HOME/.kube/k3d-gitops.yaml;             		 \
-																						 \
-	k3d cluster create                                                                   \
+		--wait gitops --registry-use k3d-myregistry.local:$(REGPORT);                                                              
+																						 
+	@k3d kubeconfig get gitops > $$HOME/.kube/k3d-gitops.yaml;             		 
+																						 
+	@k3d cluster create                                                                   \
 		--servers 1                                                                      \
 		--agents 1                                                                       \
 		--api-port 64433                                                                 \
@@ -86,11 +88,11 @@ multi: kubeconfig-multi
 		--k3s-node-label tier=server@server:0                                            \
 		--k3s-node-label tier=worker@agent:0                                             \
 		--k3s-node-label worker=a@agent:0                                                \
-		--wait production;                                                               \
-																						 \
-	k3d kubeconfig get production > $$HOME/.kube/k3d-production.yaml;               \
-																						 \
-	k3d cluster create                                                                   \
+		--wait production --registry-use k3d-myregistry.local:$(REGPORT);                                                               
+																						 
+	@k3d kubeconfig get production > $$HOME/.kube/k3d-production.yaml;               
+																						 
+	@k3d cluster create                                                                   \
 		--servers 1                                                                      \
 		--agents 1                                                                       \
 		--api-port 64431                                                                 \
@@ -109,9 +111,9 @@ multi: kubeconfig-multi
 		--k3s-node-label tier=server@server:0                                            \
 		--k3s-node-label tier=worker@agent:0                                             \
 		--k3s-node-label worker=a@agent:0                                                \
-		--wait development;                                                                   \
-																						 \
-	k3d kubeconfig get development > $$HOME/.kube/k3d-development.yaml                        \
+		--wait development --registry-use k3d-myregistry.local:$(REGPORT);                                                                   
+																						 
+	@k3d kubeconfig get development > $$HOME/.kube/k3d-development.yaml                        
 
 
 multicluster: clean registry multi kubeconfig-multi portainer headlamp ## Create K3s multicluster/registry
@@ -121,13 +123,14 @@ setup:	## Install k8 tools and setup local domains
 	#@sh $(K3D)/install_helm.sh
 	#@sh $(K3D)/install_kubectl.sh
 
-test:
-	@kubectl config use-context k3d-development
+testregistry:
+	@kubectl config use-context $(CONTEXT)
+	@kubectl delete -f $(TEST)/testapp.yaml || true
 	@docker pull nginx:latest
-	@docker tag nginx:latest harbor.local/library/nginx:latest
-	@docker login harbor.local -u admin -p Harbor12345 
-	@docker push harbor.local/library/nginx:latest
-	#@kubectl apply -f $(HARBOR)/testapp.yaml
+	@docker tag nginx:latest k3d-myregistry.local:$(REGPORT)/nginx:latest
+	@docker push k3d-myregistry.local:$(REGPORT)/nginx:latest
+	@kubectl apply -f $(TEST)/testapp.yaml
+	@kubectl get po
 
 harbor:
 	@kubectl config use-context k3d-gitops
