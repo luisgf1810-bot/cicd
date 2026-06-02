@@ -45,7 +45,7 @@ kubeconfig-multi:
 	@mv $$HOME/.kube/config-merged $$HOME/.kube/config
 
 
-multi: kubeconfig-multi 
+createmulti: kubeconfig-multi 
 	@k3d cluster create                         		                                 \
 		--servers 1                                                                      \
 		--agents 1                                                                       \
@@ -116,7 +116,7 @@ multi: kubeconfig-multi
 	@k3d kubeconfig get development > $$HOME/.kube/k3d-development.yaml                        
 
 
-multicluster: clean registry multi kubeconfig-multi portainer headlamp ## Create K3s multicluster/registry
+multicluster: clean registry createmulti kubeconfig-multi portainer headlamp ## Create K3s multicluster/registry
 
 setup:	## Install k8 tools and setup local domains
 	#@sh $(K3D)/install_k3d.sh
