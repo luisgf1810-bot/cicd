@@ -51,17 +51,18 @@ createmulti: kubeconfig-multi
 		--agents 1                                                                       \
 		--api-port 64432                                                                 \
 		--network multicluster                                                           \
-		--image rancher/k3s:latest                                                 \
+		--image rancher/k3s:latest                                                 		\
 		--token superSecretToken                                                         \
 		--timeout 60s                                                                    \
 		--port 80:80@loadbalancer:0                                                    	 \
-		--port 443:443@loadbalancer:0      \
+		--port 443:443@loadbalancer:0      												\
 		--k3s-arg "--cluster-cidr=10.1.0.0/16@server:0"                                  \
 		--k3s-arg "--service-cidr=10.0.0.0/16@server:0"                                  \
 		--k3s-arg "--etcd-disable-snapshots@server:0"                                    \
-		--k3s-arg "--tls-san=k3d-gitops-serverlb@server:0"                          \
+		--k3s-arg "--tls-san=k3d-gitops-serverlb@server:0"                          	\
 		--k3s-arg "--disable=network-policy@server:0"                                    \
 		--k3s-arg "--disable=cloud-controller@server:0"                                  \
+		--k3s-arg "--node-taint=CriticalAddonsOnly=true:NoExecute@server:0"				\
 		--k3s-node-label tier=server@server:0                                            \
 		--k3s-node-label tier=worker@agent:0                                             \
 		--k3s-node-label worker=a@agent:0                                                \
@@ -77,7 +78,7 @@ createmulti: kubeconfig-multi
 		--image rancher/k3s:v1.21.6-k3s1                                                 \
 		--token superSecretToken                                                         \
 		--timeout 60s                                                                    \
-		--port 9080:80@loadbalancer:0                                                    	 \
+		--port 9080:80@loadbalancer:0                                                    \
 		--port 9443:443@loadbalancer:0                                                    \
 		--k3s-arg "--cluster-cidr=10.1.0.0/16@server:0"                                  \
 		--k3s-arg "--service-cidr=10.0.0.0/16@server:0"                                  \
@@ -85,6 +86,7 @@ createmulti: kubeconfig-multi
 		--k3s-arg "--tls-san=k3d-production-serverlb@server:0"                           \
 		--k3s-arg "--disable=network-policy@server:0"                                    \
 		--k3s-arg "--disable=cloud-controller@server:0"                                  \
+		--k3s-arg "--node-taint=CriticalAddonsOnly=true:NoExecute@server:0"				\
 		--k3s-node-label tier=server@server:0                                            \
 		--k3s-node-label tier=worker@agent:0                                             \
 		--k3s-node-label worker=a@agent:0                                                \
@@ -100,14 +102,15 @@ createmulti: kubeconfig-multi
 		--image rancher/k3s:v1.21.6-k3s1                                                 \
 		--token superSecretToken                                                         \
 		--timeout 60s                                                                    \
-		--port 9081:80@loadbalancer:0                                                    	 \
+		--port 9081:80@loadbalancer:0                                                    \
 		--port 9444:443@loadbalancer:0                                                    \
 		--k3s-arg "--cluster-cidr=10.1.0.0/16@server:0"                                  \
 		--k3s-arg "--service-cidr=10.0.0.0/16@server:0"                                  \
 		--k3s-arg "--etcd-disable-snapshots@server:0"                                    \
-		--k3s-arg "--tls-san=k3d-development-serverlb@server:0"                               \
+		--k3s-arg "--tls-san=k3d-development-serverlb@server:0"                           \
 		--k3s-arg "--disable=network-policy@server:0"                                    \
 		--k3s-arg "--disable=cloud-controller@server:0"                                  \
+		--k3s-arg "--node-taint=CriticalAddonsOnly=true:NoExecute@server:0"				\
 		--k3s-node-label tier=server@server:0                                            \
 		--k3s-node-label tier=worker@agent:0                                             \
 		--k3s-node-label worker=a@agent:0                                                \
@@ -138,8 +141,6 @@ harbor:
 	@helm repo update
 	@helm upgrade --install harbor harbor/harbor -f $(HARBOR)/custom-values.yaml
 
-	
-
 gitea:
 	@kubectl config use-context k3d-gitops
 	@helm repo add gitea-charts https://dl.gitea.com/charts/
@@ -157,3 +158,6 @@ argocd:
 	@kubectl -n default get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
 
 gitops: harbor gitea argocd ## Deploy gitops tools
+	@google-chrome http://gitea.local &
+	@google-chrome http://argocd.local &
+	@google-chrome https://portainer.local:7443 &
