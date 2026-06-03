@@ -1,0 +1,21 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: bgd-ingress
+  namespace: bgd
+  annotations:
+    # Traefik-specific annotations (K3s default ingress controller)
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+    ingress.kubernetes.io/class: "traefik"
+spec:
+  rules:
+  - host: testapp.local 
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: bgd
+            port:
+              number: 8080
