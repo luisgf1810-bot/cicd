@@ -6,9 +6,9 @@ metadata:
 spec:
   destination:
     namespace: bgd
-    server: https://kubernetes.default.svc
+    server: https://0.0.0.0:64431
   project: default
   source:
-    repoURL: http://gitea-http:3000/gitea_admin/test.git
-    path: /
+    repoURL: http://gitea-http:3000/gitea_admin/bgd.git
+    path: .
     targetRevision: main

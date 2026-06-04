@@ -158,6 +158,9 @@ argocd:
 	@kubectl -n default get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
 
 gitops: harbor gitea argocd ## Deploy gitops tools
-	@google-chrome http://gitea.local &
-	@google-chrome http://argocd.local &
-	@google-chrome https://portainer.local:7443 &
+	#@google-chrome http://gitea.local &
+	#@google-chrome http://argocd.local &
+	#@google-chrome https://portainer.local:7443 &
+
+
+examples:
