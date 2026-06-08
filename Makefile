@@ -106,10 +106,18 @@ testregistry:
 	@kubectl apply -f $(TEST)/testapp.yaml
 	@kubectl get po
 
+
+headlamp:
+	@helm repo add headlamp https://kubernetes-sigs.github.io/headlamp/
+	@helm repo update
+	@helm install headlamp headlamp/headlamp --namespace kube-system
+	@kubectl apply -f $(HLAMP)/ingress.yaml
+	@kubectl create token headlamp --namespace kube-system
+
 harbor:
 	@helm repo add harbor https://helm.goharbor.io
 	@helm repo update
-	@helm upgrade --install harbor harbor/harbor -f $(HARBOR)/custom-values.yaml
+	@helm install harbor harbor/harbor -n harbor --create-namespace -f scripts/harbor/values.yaml
 
 gitea:
 	@helm repo add gitea-charts https://dl.gitea.com/charts/
@@ -143,7 +151,7 @@ argocd:
 
 
 
-gitops: gitea awx terrakube argocd ## Deploy gitops tools
+gitops: headlamp harbor gitea awx terrakube argocd ## Deploy gitops tools
 
 
 

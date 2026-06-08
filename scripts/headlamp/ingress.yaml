@@ -4,18 +4,17 @@ metadata:
   name: headlamp-ingress
   namespace: kube-system
   annotations:
-    # Traefik-specific annotations (K3s default ingress controller)
-    traefik.ingress.kubernetes.io/router.entrypoints: web
-    ingress.kubernetes.io/class: "traefik"
+    nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
+  ingressClassName: nginx
   rules:
-  - host: gitops.headlamp.local 
+  - host: headlamp.minikube.net 
     http:
       paths:
       - path: /
         pathType: Prefix
         backend:
           service:
-            name: my-headlamp
+            name: headlamp
             port:
               number: 80
