@@ -4,10 +4,10 @@ sudo install -m 555 argocd-linux-amd64 /usr/local/bin/argocd
 rm argocd-linux-amd64
 
 # change kubeconfig ips with the ones of the endpoints
-kubectl get endpointskubect 
+kubectl get endpoints
 
 # Login
-argocd login argocd.local
+argocd login argocd.minikube.net
 
 # List available contexts
 kubectl config get-contexts

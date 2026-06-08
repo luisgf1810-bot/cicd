@@ -107,7 +107,6 @@ testregistry:
 	@kubectl get po
 
 harbor:
-	@kubectl config use-context k3d-gitops
 	@helm repo add harbor https://helm.goharbor.io
 	@helm repo update
 	@helm upgrade --install harbor harbor/harbor -f $(HARBOR)/custom-values.yaml
@@ -118,10 +117,12 @@ gitea:
 	@helm install gitea gitea-charts/gitea -f $(GITEA)/custom-values.yaml -n gitea --create-namespace
 	@kubectl apply -f $(GITEA)/ingress.yaml
 
-gitlab:
-	@helm repo add gitlab https://charts.gitlab.io/
+awx:
+	@helm repo add awx-operator https://ansible-community.github.io/awx-operator-helm/
 	@helm repo update
-	@helm install gitlab gitlab/gitlab -f $(GITLAB)/custom-values.yaml -n gitea --create-namespace --timeout 600s
+	@helm install my-awx-operator awx-operator/awx-operator -n awx --create-namespace
+	@cd scripts/awx && kubectl apply -k .
+	@kubectl get secret awx-demo-admin-password -n awx -o jsonpath="{.data.password}" | base64 --decode 
 
 terrakube:
 	@kubectl create namespace terrakube | true
@@ -131,22 +132,16 @@ terrakube:
 	@yq -e '.security.caCerts."rootCA.pem"=strenv(MYCERT)' scripts/terrakube/template.yaml > scripts/terrakube/values.yaml
 	@helm install terrakube terrakube-repo/terrakube -n terrakube --values scripts/terrakube/values.yaml 
 
-awx:
-	@helm repo add awx-operator https://ansible-community.github.io/awx-operator-helm/
-	@helm repo update
-	@helm install my-awx-operator awx-operator/awx-operator -n awx --create-namespace
-	@cd scripts/awx && kubectl apply -k .
-	@kubectl get secret awx-demo-admin-password -n awx -o jsonpath="{.data.password}" | base64 --decode 
-
-
 argocd:
 	@helm repo add argo https://argoproj.github.io/argo-helm
 	@helm repo update
 	@helm install argocd argo/argo-cd -n argocd --create-namespace
-	@kubectl patch configmap argocd-cmd-params-cm --type merge -p '{"data":{"server.insecure": "true"}}' 
-	@kubectl patch configmap argocd-cm --type merge -p '{"data":{"url":"https://argocd.minikube.net"}}'
+	@kubectl patch configmap argocd-cmd-params-cm -n argocd --type merge -p '{"data":{"server.insecure": "true"}}' 
+	@kubectl patch configmap argocd-cm -n argocd --type merge -p '{"data":{"url":"https://argocd.minikube.net"}}'
 	@kubectl apply -f $(ARGOCD)/ingress.yaml
-	@kubectl -n default get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+	@kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
+
+
 
 gitops: gitea awx terrakube argocd ## Deploy gitops tools
 
