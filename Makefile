@@ -77,17 +77,18 @@ createmulti2:
 	@mkcert -install
 	@mkcert -CAROOT /home/luis/.local/share/mkcert
 	@cat /home/luis/.local/share/mkcert/rootCA.pem
-	@mkcert -key-file key.pem -cert-file cert.pem local *.local
-	@mv key.pem scripts/minikube/
-	@mv cert.pem scripts/minikube/
-	@minikube start
+	@mkcert -key-file key.pem -cert-file cert.pem minikube.net *.minikube.net
+	@minikube start --cpus=4 --memory=6g
 	@minikube addons enable ingress
 	@minikube addons enable storage-provisioner
 	@minikube ip 
-	@kubectl -n kube-system create secret tls mkcert --key scripts/minikube/key.pem --cert scripts/minikube/cert.pem
-	@minikube addons configure ingress
+	@kubectl -n kube-system create secret tls mkcert --key key.pem --cert cert.pem
+	@echo "kube-system/mkcert" | minikube addons configure ingress
 	@minikube addons disable ingress
-	@minikubgitlab argocde addons enable ingress
+	@minikube addons enable ingress
+	@mv key.pem scripts/minikube/
+	@mv cert.pem scripts/minikube/
+
 
 cluster: clean createmulti2 kubeconfig-multi portainer ## Create minikube cluster
 
@@ -112,16 +113,15 @@ harbor:
 	@helm upgrade --install harbor harbor/harbor -f $(HARBOR)/custom-values.yaml
 
 gitea:
-	@kubectl config use-context k3d-gitops
 	@helm repo add gitea-charts https://dl.gitea.com/charts/
-	@helm repo updchange root cert in values.yml and apply:ate
-	@helm upgrade --install gitea gitea-charts/gitea -f $(GITEA)/custom-values.yaml
+	@helm repo update
+	@helm install gitea gitea-charts/gitea -f $(GITEA)/custom-values.yaml -n gitea --create-namespace
 	@kubectl apply -f $(GITEA)/ingress.yaml
 
 gitlab:
 	@helm repo add gitlab https://charts.gitlab.io/
 	@helm repo update
-	@helm install gitlab gitlab/gitlab -f $(GITLAB)/custom-values.yaml --timeout 600s
+	@helm install gitlab gitlab/gitlab -f $(GITLAB)/custom-values.yaml -n gitea --create-namespace --timeout 600s
 
 terrakube:
 	@kubectl create namespace terrakube | true
@@ -131,16 +131,24 @@ terrakube:
 	@yq -e '.security.caCerts."rootCA.pem"=strenv(MYCERT)' scripts/terrakube/template.yaml > scripts/terrakube/values.yaml
 	@helm install terrakube terrakube-repo/terrakube -n terrakube --values scripts/terrakube/values.yaml 
 
+awx:
+	@helm repo add awx-operator https://ansible-community.github.io/awx-operator-helm/
+	@helm repo update
+	@helm install my-awx-operator awx-operator/awx-operator -n awx --create-namespace
+	@cd scripts/awx && kubectl apply -k .
+	@kubectl get secret awx-demo-admin-password -n awx -o jsonpath="{.data.password}" | base64 --decode 
+
+
 argocd:
 	@helm repo add argo https://argoproj.github.io/argo-helm
 	@helm repo update
-	@helm upgrade --install argocd argo/argo-cd
+	@helm install argocd argo/argo-cd -n argocd --create-namespace
 	@kubectl patch configmap argocd-cmd-params-cm --type merge -p '{"data":{"server.insecure": "true"}}' 
-	@kubectl patch configmap argocd-cm --type merge -p '{"data":{"url":"https://argocd.local"}}'
+	@kubectl patch configmap argocd-cm --type merge -p '{"data":{"url":"https://argocd.minikube.net"}}'
 	@kubectl apply -f $(ARGOCD)/ingress.yaml
 	@kubectl -n default get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
 
-gitops: terrakube ## Deploy gitops tools
+gitops: gitea awx terrakube argocd ## Deploy gitops tools
 
 
 

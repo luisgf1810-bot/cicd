@@ -36,7 +36,7 @@ registry:
   serviceType: "ClusterIP"
 dex:
   config:
-    issuer: https://terrakube-api.local/dex
+    issuer: https://terrakube-api.minikube.net/dex
     storage:
       type: memory
     web:
@@ -95,7 +95,7 @@ dex:
     staticClients:
       - id: example-app
         redirectURIs:
-          - 'https://terrakube-ui.local'
+          - 'https://terrakube-ui.minikube.net'
           - '/device/callback'
           - 'http://localhost:10000/login'
           - 'http://localhost:10001/login'
@@ -107,7 +107,7 @@ ingress:
   includeTlsHosts: true
   ui:
     enabled: true
-    domain: "terrakube-ui.local"
+    domain: "terrakube-ui.minikube.net"
     path: "/"
     pathType: "Prefix"
     tlsSecretName: tls-secret-ui-terrakube
@@ -116,7 +116,7 @@ ingress:
       nginx.ingress.kubernetes.io/use-regex: "true"
   api:
     enabled: true
-    domain: "terrakube-api.local"
+    domain: "terrakube-api.minikube.net"
     path: "/"
     pathType: "Prefix"
     tlsSecretName: tls-secret-api-terrakube
@@ -126,7 +126,7 @@ ingress:
       nginx.ingress.kubernetes.io/proxy-set-headers: "terrakube/custom-headers"
   registry:
     enabled: true
-    domain: "terrakube-reg.local"
+    domain: "terrakube-reg.minikube.net"
     path: "/"
     pathType: "Prefix"
     tlsSecretName: tls-secret-reg-terrakube
