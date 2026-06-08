@@ -1,0 +1,143 @@
+security:
+  caCerts:
+    rootCA.pem: |-
+      -----BEGIN CERTIFICATE-----
+      MIIEcjCCAtqgAwIBAgIRALHY2rOUFnogBlXfq6jsQ8gwDQYJKoZIhvcNAQELBQAw
+      UTEeMBwGA1UEChMVbWtjZXJ0IGRldmVsb3BtZW50IENBMRMwEQYDVQQLDApsdWlz
+      QHBjZGV2MRowGAYDVQQDDBFta2NlcnQgbHVpc0BwY2RldjAeFw0yNjA2MDYxNzQx
+      MzBaFw0zNjA2MDYxNzQxMzBaMFExHjAcBgNVBAoTFW1rY2VydCBkZXZlbG9wbWVu
+      dCBDQTETMBEGA1UECwwKbHVpc0BwY2RldjEaMBgGA1UEAwwRbWtjZXJ0IGx1aXNA
+      cGNkZXYwggGiMA0GCSqGSIb3DQEBAQUAA4IBjwAwggGKAoIBgQDm0pB70esEq0Zo
+      +6HhIgIn/Iv+PJ5DJ+kHj7IjVF9zM+P6o0zHjXdmIwPC7Xlc3ViW0/3ltVM9hGt+
+      qfvBz3Ins9sMIdZ1yBaGY/UmvU6VQCsls8oZrEfVaCRtZfjuizf7Zn82AdHOtkUn
+      BRBm+kb3f5TofTzZPRLMRGdYVEsgvkVGwxOJ0enLMsxLNnekZcKvNSVEGh6GqPjn
+      Kk0mzomZGntf5bZ07wia0f0E86ho1cww7Qxk1DNxog3mxh4j1R//EfIy4mff0haF
+      GgJbtaVQ8YnBSQWEO5Cu6DEMlZ4SgkoqaYceeRSAhrBPqr9kWowX0NpH/9zmdfRq
+      sFEyyuQyT6m+4mUlIioUFnQtyz8ZTAh1CfiR9ePVVrrZ3BWrwQeJqZDDsNUyXBsU
+      won/xxk8VYvGmQME1QVBWQnS0l989zTDCkDXvOYmAP07kyuflWHT5bDsQt29mEPV
+      jDrtYVjTufRQ+huC9wYvv4z0LQ2eQ+tZTNTH+E+hlFp05nkuRBsCAwEAAaNFMEMw
+      DgYDVR0PAQH/BAQDAgIEMBIGA1UdEwEB/wQIMAYBAf8CAQAwHQYDVR0OBBYEFEBY
+      PEkHKgdl810UhjYK6xhVbegjMA0GCSqGSIb3DQEBCwUAA4IBgQACcmO6lTnKsgij
+      n00elUDFVUUjH588ryxUoD0i2dEzj4jDWWT8q+pjUwzbFCdEa9x/c0mMHmvpdLD1
+      RCBIb+BPClX9lkx8C4OlCmW5iE+tQ+bAZ+AKjv8gQ9mLnTQBOOmfJ3ZX08gMho6W
+      ymrCSkSZfS16Sx9zTvp5GWtE/sb+aJlRg+yWiCBhqAbNv4PoL9sKyNanOTkuqw/j
+      EbW0MDS2b+sG4epgOGRZAUPW7OK2y/BHn0+E9rK0lNa59Gsv0M5IbP4OQDvrhtR/
+      3ovl/+1h7xQn9Nf0sLdcnK9lscs9IvdIqJRY4ur3iYFgMd9UiJyUrqnLfM6LdDuO
+      gFc7phYU8BhAqVZQBf8WD2rzthUoSkgeLbUpdwrRzz31JZ6gjni/bG7eTmirYBVw
+      RGTk9M89stQIyw/QgoTKQh/S5CAKFC74j/bX9gSYZDnnWUCuM2fQZiZaAyVPYUJL
+      gvl9lcxXVZCstcR00l6w1S5W99kyXOKGls+oCKaeKg6Xpx0/3xI=
+      -----END CERTIFICATE-----
+api:
+  properties:
+    databaseType: "H2"
+registry:
+  enabled: true
+  replicaCount: "1"
+  serviceType: "ClusterIP"
+dex:
+  config:
+    issuer: https://terrakube-api.local/dex
+    storage:
+      type: memory
+    web:
+      http: 0.0.0.0:5556
+      allowedOrigins: ['*']
+      skipApprovalScreen: true
+    oauth2:
+      responseTypes: ["code", "token", "id_token"]
+    connectors:
+      - type: ldap
+        name: OpenLDAP
+        id: ldap
+        config:
+          # The following configurations seem to work with OpenLDAP:
+          #
+          # 1) Plain LDAP, without TLS:
+          host: terrakube-openldap-service:1389
+          insecureNoSSL: true
+          #
+          # 2) LDAPS without certificate validation:
+          #host: localhost:636
+          #insecureNoSSL: false
+          #insecureSkipVerify: true
+          #
+          # 3) LDAPS with certificate validation:
+          #host: YOUR-HOSTNAME:636
+          #insecureNoSSL: false
+          #insecureSkipVerify: false
+          #rootCAData: 'CERT'
+          # ...where CERT="$( base64 -w 0 your-cert.crt )"
+
+          # This would normally be a read-only user.
+          bindDN: cn=admin,dc=example,dc=org
+          bindPW: admin
+          usernamePrompt: Email Address
+          userSearch:
+            baseDN: ou=users,dc=example,dc=org
+            filter: "(objectClass=person)"
+            username: mail
+            # "DN" (case sensitive) is a special attribute name. It indicates that
+            # this value should be taken from the entity's DN not an attribute on
+            # the entity.
+            idAttr: DN
+            emailAttr: mail
+            nameAttr: cn
+          groupSearch:
+            baseDN: ou=Groups,dc=example,dc=org
+            filter: "(objectClass=groupOfNames)"
+            userMatchers:
+              # A user is a member of a group when their DN matches
+              # the value of a "member" attribute on the group entity.
+              - userAttr: DN
+                groupAttr: member
+            # The group name should be the "cn" value.
+            nameAttr: cn
+    staticClients:
+      - id: example-app
+        redirectURIs:
+          - 'https://terrakube-ui.local'
+          - '/device/callback'
+          - 'http://localhost:10000/login'
+          - 'http://localhost:10001/login'
+        name: 'example-app'
+        public: true
+## Ingress properties
+ingress:
+  useTls: true
+  includeTlsHosts: true
+  ui:
+    enabled: true
+    domain: "terrakube-ui.local"
+    path: "/"
+    pathType: "Prefix"
+    tlsSecretName: tls-secret-ui-terrakube
+    ingressClassName: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/use-regex: "true"
+  api:
+    enabled: true
+    domain: "terrakube-api.local"
+    path: "/"
+    pathType: "Prefix"
+    tlsSecretName: tls-secret-api-terrakube
+    ingressClassName: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/use-regex: "true"
+      nginx.ingress.kubernetes.io/proxy-set-headers: "terrakube/custom-headers"
+  registry:
+    enabled: true
+    domain: "terrakube-reg.local"
+    path: "/"
+    pathType: "Prefix"
+    tlsSecretName: tls-secret-reg-terrakube
+    ingressClassName: "nginx"
+    annotations:
+      nginx.ingress.kubernetes.io/use-regex: "true"
+      nginx.ingress.kubernetes.io/proxy-set-headers: "terrakube/custom-headers"
+  dex:
+    enabled: true
+    path: "/dex/"
+    pathType: "Prefix"
+    annotations:
+      nginx.ingress.kubernetes.io/use-regex: "true"
+      nginx.ingress.kubernetes.io/proxy-set-headers: "terrakube/custom-headers"

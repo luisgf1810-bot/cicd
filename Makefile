@@ -7,6 +7,7 @@ GITEA := scripts/gitea
 ARGOCD := scripts/argocd
 REGPORT := 12345
 TEST := test
+GITLAB := scripts/gitlab
 
 help: ## Usage: 'make <target>' where target is: multicluster, up, down, clean.
 	@egrep '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -22,6 +23,7 @@ clean: ## Destroys clusters
 	@docker volume rm -f portainer_data || true
 	@k3d registry delete --all
 	@k3d cluster delete --all 
+	@minikube delete
 
 headlamp:
 	@kubectl config use-context k3d-gitops
@@ -54,8 +56,9 @@ createmulti: kubeconfig-multi
 		--image rancher/k3s:latest                                                 		\
 		--token superSecretToken                                                         \
 		--timeout 60s                                                                    \
-		--port 80:80@loadbalancer:0                                                    	 \
-		--port 443:443@loadbalancer:0      												\
+		--port 80:80@loadbalancer:0													\
+		--port 443:443@loadbalancer:0	                               	 		\
+		--k3s-arg "--disable=traefik@server:0"      									\
 		--k3s-arg "--cluster-cidr=10.1.0.0/16@server:0"                                  \
 		--k3s-arg "--service-cidr=10.0.0.0/16@server:0"                                  \
 		--k3s-arg "--etcd-disable-snapshots@server:0"                                    \
@@ -70,56 +73,23 @@ createmulti: kubeconfig-multi
 																						 
 	@k3d kubeconfig get gitops > $$HOME/.kube/k3d-gitops.yaml;             		 
 																						 
-	@k3d cluster create                                                                   \
-		--servers 1                                                                      \
-		--agents 1                                                                       \
-		--api-port 64433                                                                 \
-		--network multicluster                                                           \
-		--image rancher/k3s:v1.21.6-k3s1                                                 \
-		--token superSecretToken                                                         \
-		--timeout 60s                                                                    \
-		--port 9080:80@loadbalancer:0                                                    \
-		--port 9443:443@loadbalancer:0                                                    \
-		--k3s-arg "--cluster-cidr=10.1.0.0/16@server:0"                                  \
-		--k3s-arg "--service-cidr=10.0.0.0/16@server:0"                                  \
-		--k3s-arg "--etcd-disable-snapshots@server:0"                                    \
-		--k3s-arg "--tls-san=k3d-production-serverlb@server:0"                           \
-		--k3s-arg "--disable=network-policy@server:0"                                    \
-		--k3s-arg "--disable=cloud-controller@server:0"                                  \
-		--k3s-arg "--node-taint=CriticalAddonsOnly=true:NoExecute@server:0"				\
-		--k3s-node-label tier=server@server:0                                            \
-		--k3s-node-label tier=worker@agent:0                                             \
-		--k3s-node-label worker=a@agent:0                                                \
-		--wait production --registry-use k3d-myregistry.local:$(REGPORT);                                                               
-																						 
-	@k3d kubeconfig get production > $$HOME/.kube/k3d-production.yaml;               
-																						 
-	@k3d cluster create                                                                   \
-		--servers 1                                                                      \
-		--agents 1                                                                       \
-		--api-port 64431                                                                 \
-		--network multicluster                                                           \
-		--image rancher/k3s:v1.21.6-k3s1                                                 \
-		--token superSecretToken                                                         \
-		--timeout 60s                                                                    \
-		--port 9081:80@loadbalancer:0                                                    \
-		--port 9444:443@loadbalancer:0                                                    \
-		--k3s-arg "--cluster-cidr=10.1.0.0/16@server:0"                                  \
-		--k3s-arg "--service-cidr=10.0.0.0/16@server:0"                                  \
-		--k3s-arg "--etcd-disable-snapshots@server:0"                                    \
-		--k3s-arg "--tls-san=k3d-development-serverlb@server:0"                           \
-		--k3s-arg "--disable=network-policy@server:0"                                    \
-		--k3s-arg "--disable=cloud-controller@server:0"                                  \
-		--k3s-arg "--node-taint=CriticalAddonsOnly=true:NoExecute@server:0"				\
-		--k3s-node-label tier=server@server:0                                            \
-		--k3s-node-label tier=worker@agent:0                                             \
-		--k3s-node-label worker=a@agent:0                                                \
-		--wait development --registry-use k3d-myregistry.local:$(REGPORT);                                                                   
-																						 
-	@k3d kubeconfig get development > $$HOME/.kube/k3d-development.yaml                        
+createmulti2:
+	@mkcert -install
+	@mkcert -CAROOT /home/luis/.local/share/mkcert
+	@cat /home/luis/.local/share/mkcert/rootCA.pem
+	@mkcert -key-file key.pem -cert-file cert.pem local *.local
+	@mv key.pem scripts/minikube/
+	@mv cert.pem scripts/minikube/
+	@minikube start
+	@minikube addons enable ingress
+	@minikube addons enable storage-provisioner
+	@minikube ip 
+	@kubectl -n kube-system create secret tls mkcert --key scripts/minikube/key.pem --cert scripts/minikube/cert.pem
+	@minikube addons configure ingress
+	@minikube addons disable ingress
+	@minikubgitlab argocde addons enable ingress
 
-
-multicluster: clean registry createmulti kubeconfig-multi portainer headlamp ## Create K3s multicluster/registry
+cluster: clean createmulti2 kubeconfig-multi portainer ## Create minikube cluster
 
 setup:	## Install k8 tools and setup local domains
 	#@sh $(K3D)/install_k3d.sh
@@ -144,9 +114,22 @@ harbor:
 gitea:
 	@kubectl config use-context k3d-gitops
 	@helm repo add gitea-charts https://dl.gitea.com/charts/
-	@helm repo update
+	@helm repo updchange root cert in values.yml and apply:ate
 	@helm upgrade --install gitea gitea-charts/gitea -f $(GITEA)/custom-values.yaml
 	@kubectl apply -f $(GITEA)/ingress.yaml
+
+gitlab:
+	@helm repo add gitlab https://charts.gitlab.io/
+	@helm repo update
+	@helm install gitlab gitlab/gitlab -f $(GITLAB)/custom-values.yaml --timeout 600s
+
+terrakube:
+	@kubectl create namespace terrakube | true
+	@helm repo add terrakube-repo https://charts.terrakube.io
+	@helm repo update
+	@export MYCERT=$(cat /home/luis/.local/share/mkcert/rootCA.pem) 
+	@yq -e '.security.caCerts."rootCA.pem"=strenv(MYCERT)' scripts/terrakube/template.yaml > scripts/terrakube/values.yaml
+	@helm install terrakube terrakube-repo/terrakube -n terrakube --values scripts/terrakube/values.yaml 
 
 argocd:
 	@helm repo add argo https://argoproj.github.io/argo-helm
@@ -157,10 +140,8 @@ argocd:
 	@kubectl apply -f $(ARGOCD)/ingress.yaml
 	@kubectl -n default get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
 
-gitops: harbor gitea argocd ## Deploy gitops tools
-	#@google-chrome http://gitea.local &
-	#@google-chrome http://argocd.local &
-	#@google-chrome https://portainer.local:7443 &
+gitops: terrakube ## Deploy gitops tools
+
 
 
 examples:

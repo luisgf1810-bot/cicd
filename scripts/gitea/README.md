@@ -79,7 +79,8 @@ gitea:
 then install with the following command:
 
 ```
-helm install gitea gitea-charts/gitea -f custom-values.yaml
+helm install gitea gitea-charts/gitea -f scripts/gitea/custom-values.yaml --namespace gitea --creat
+e-namespace
 
 ```
 
