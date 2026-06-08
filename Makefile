@@ -1,13 +1,14 @@
 
 # Define directories
 HLAMP := scripts/headlamp
-K3D := scripts/k3d
 HARBOR := scripts/harbor
 GITEA := scripts/gitea
 ARGOCD := scripts/argocd
+GITLAB := scripts/gitlab
+TERRAKUBE := scripts/terrakube
 REGPORT := 12345
 TEST := test
-GITLAB := scripts/gitlab
+
 
 help: ## Usage: 'make <target>' where target is: multicluster, up, down, clean.
 	@egrep '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
@@ -45,40 +46,14 @@ kubeconfig-multi:
 	@export KUBECONFIG=$$HOME/.kube/k3d-gitops.yaml:$$HOME/.kube/k3d-development.yaml:$HOME/.kube/k3d-production.yaml
 	@kubectl config view --flatten > $$HOME/.kube/config-merged 
 	@mv $$HOME/.kube/config-merged $$HOME/.kube/config
-
-
-createmulti: kubeconfig-multi 
-	@k3d cluster create                         		                                 \
-		--servers 1                                                                      \
-		--agents 1                                                                       \
-		--api-port 64432                                                                 \
-		--network multicluster                                                           \
-		--image rancher/k3s:latest                                                 		\
-		--token superSecretToken                                                         \
-		--timeout 60s                                                                    \
-		--port 80:80@loadbalancer:0													\
-		--port 443:443@loadbalancer:0	                               	 		\
-		--k3s-arg "--disable=traefik@server:0"      									\
-		--k3s-arg "--cluster-cidr=10.1.0.0/16@server:0"                                  \
-		--k3s-arg "--service-cidr=10.0.0.0/16@server:0"                                  \
-		--k3s-arg "--etcd-disable-snapshots@server:0"                                    \
-		--k3s-arg "--tls-san=k3d-gitops-serverlb@server:0"                          	\
-		--k3s-arg "--disable=network-policy@server:0"                                    \
-		--k3s-arg "--disable=cloud-controller@server:0"                                  \
-		--k3s-arg "--node-taint=CriticalAddonsOnly=true:NoExecute@server:0"				\
-		--k3s-node-label tier=server@server:0                                            \
-		--k3s-node-label tier=worker@agent:0                                             \
-		--k3s-node-label worker=a@agent:0                                                \
-		--wait gitops --registry-use k3d-myregistry.local:$(REGPORT);                                                              
+  		 
 																						 
-	@k3d kubeconfig get gitops > $$HOME/.kube/k3d-gitops.yaml;             		 
-																						 
-createmulti2:
+createcluster:
 	@mkcert -install
 	@mkcert -CAROOT /home/luis/.local/share/mkcert
 	@cat /home/luis/.local/share/mkcert/rootCA.pem
 	@mkcert -key-file key.pem -cert-file cert.pem minikube.net *.minikube.net
-	@minikube start --cpus=4 --memory=6g
+	@minikube start --cpus=4 --memory=6g --insecure-registry="harbor.minikube.net"
 	@minikube addons enable ingress
 	@minikube addons enable storage-provisioner
 	@minikube ip 
@@ -90,7 +65,7 @@ createmulti2:
 	@mv cert.pem scripts/minikube/
 
 
-cluster: clean createmulti2 kubeconfig-multi portainer ## Create minikube cluster
+cluster: clean createcluster kubeconfig-multi portainer gitops## Create minikube cluster
 
 setup:	## Install k8 tools and setup local domains
 	#@sh $(K3D)/install_k3d.sh
@@ -98,11 +73,10 @@ setup:	## Install k8 tools and setup local domains
 	#@sh $(K3D)/install_kubectl.sh
 
 testregistry:
-	@kubectl config use-context $(CONTEXT)
-	@kubectl delete -f $(TEST)/testapp.yaml || true
+	#@kubectl delete -f $(TEST)/testapp.yaml || true
 	@docker pull nginx:latest
-	@docker tag nginx:latest k3d-myregistry.local:$(REGPORT)/nginx:latest
-	@docker push k3d-myregistry.local:$(REGPORT)/nginx:latest
+	@docker tag nginx:latest harbor.minikube.net/library/nginx:latest
+	@docker push harbor.minikube.net/library/nginx:latest
 	@kubectl apply -f $(TEST)/testapp.yaml
 	@kubectl get po
 
@@ -117,7 +91,8 @@ headlamp:
 harbor:
 	@helm repo add harbor https://helm.goharbor.io
 	@helm repo update
-	@helm install harbor harbor/harbor -n harbor --create-namespace -f scripts/harbor/values.yaml
+	@helm install harbor harbor/harbor -n harbor --create-namespace -f $(HARBOR)/values.yaml
+	@kubectl apply -f $(HARBOR)/ingress.yaml
 
 gitea:
 	@helm repo add gitea-charts https://dl.gitea.com/charts/
@@ -137,8 +112,8 @@ terrakube:
 	@helm repo add terrakube-repo https://charts.terrakube.io
 	@helm repo update
 	@export MYCERT=$(cat /home/luis/.local/share/mkcert/rootCA.pem) 
-	@yq -e '.security.caCerts."rootCA.pem"=strenv(MYCERT)' scripts/terrakube/template.yaml > scripts/terrakube/values.yaml
-	@helm install terrakube terrakube-repo/terrakube -n terrakube --values scripts/terrakube/values.yaml 
+	@yq -e '.security.caCerts."rootCA.pem"=strenv(MYCERT)' scripts/terrakube/template.yaml > $(TERRAKUBE)/values.yaml
+	@helm install terrakube terrakube-repo/terrakube -n terrakube --values $(TERRAKUBE)/values.yaml 
 
 argocd:
 	@helm repo add argo https://argoproj.github.io/argo-helm
@@ -151,8 +126,6 @@ argocd:
 
 
 
-gitops: headlamp harbor gitea awx terrakube argocd ## Deploy gitops tools
+gitops: headlamp harbor #gitea awx terrakube argocd ## Deploy gitops tools
 
 
-
-examples:
