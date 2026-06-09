@@ -65,7 +65,7 @@ createcluster:
 	@mv cert.pem scripts/minikube/
 
 
-cluster: clean createcluster kubeconfig-multi portainer gitops## Create minikube cluster
+cluster: clean createcluster kubeconfig-multi portainer #gitops ## Create minikube cluster
 
 setup:	## Install k8 tools and setup local domains
 	#@sh $(K3D)/install_k3d.sh
@@ -91,7 +91,9 @@ headlamp:
 harbor:
 	@helm repo add harbor https://helm.goharbor.io
 	@helm repo update
-	@helm install harbor harbor/harbor -n harbor --create-namespace -f $(HARBOR)/values.yaml
+	#@helm install harbor harbor/harbor -n harbor --create-namespace 
+	@helm install registry harbor/harbor --namespace harbor --create-namespace --set expose.type="clusterIP" --set expose.tls.enabled="false" --set registry.relativeurls="true" --set expose.clusterIP.name="harbor" --set expose.clusterIP.ports.httpPort="8080" --set externalURL="http://harbor.minikube.net:8080" --set harborAdminPassword="admin" --set registry.credentials.username="admin" --set registry.credentials.password="admin"
+	@ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $$(minikube ssh-key) docker@$$(minikube ip) "sudo /bin/sh -c 'echo $$(kubectl -n devops get svc | grep -v '-' | awk '{print $3 "   harbor.devops.svc"}') >> /etc/hosts'"
 	@kubectl apply -f $(HARBOR)/ingress.yaml
 
 gitea:
@@ -99,6 +101,7 @@ gitea:
 	@helm repo update
 	@helm install gitea gitea-charts/gitea -f $(GITEA)/custom-values.yaml -n gitea --create-namespace
 	@kubectl apply -f $(GITEA)/ingress.yaml
+	@kubectl create secret docker-registry harbor --docker-server="harbor.devops.svc:8080" --docker-username="admin" --docker-password="admin"
 
 awx:
 	@helm repo add awx-operator https://ansible-community.github.io/awx-operator-helm/
