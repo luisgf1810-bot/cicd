@@ -33,15 +33,19 @@ clean: ## Destroys clusters
 	@minikube delete
 
 
-cluster: clean helmrepos createcluster kubeconfig-multi management #gitops ## Create minikube cluster
+cluster: clean helmrepos createcluster management registry ## Create minikube cluster
 
+registry: harbor 
 
-gitops: registry #gitea awx terrakube argocd ## Deploy gitops tools
+management: headlamp portainer
+
+gitops: #gitea awx terrakube argocd ## Deploy gitops tools
 
 
 
 # Cluster
 helmrepos:
+	@x-terminal-emulator -- bash -c "watch -n 2 kubectl get po --all-namespaces" &
 	@echo "---------------------------------------"
 	@echo "Update helm repos"
 	@echo "---------------------------------------"
@@ -71,56 +75,44 @@ createcluster:
 	@minikube addons enable ingress
 	@mv key.pem scripts/minikube/
 	@mv cert.pem scripts/minikube/
-
-kubeconfig-multi:
 	@export KUBECONFIG=$$HOME/.kube/k3d-gitops.yaml:$$HOME/.kube/k3d-development.yaml:$HOME/.kube/k3d-production.yaml
 	@kubectl config view --flatten > $$HOME/.kube/config-merged 
 	@mv $$HOME/.kube/config-merged $$HOME/.kube/config
+	@kubectl wait --for=condition=Ready pod -l app.kubernetes.io/component=controller --timeout=90s -n ingress-nginx
 
 
 
-
-# Management tools
-management: portainer headlamp
-
+# Management
 headlamp:
 	@echo "---------------------------------------"
 	@echo "K8/Docker management tools"
 	@echo "---------------------------------------"
-	@kubectl config use-context k3d-gitops
 	@helm repo add headlamp https://kubernetes-sigs.github.io/headlamp/
 	@helm repo update
-	@helm install my-headlamp headlamp/headlamp   --namespace kube-system
-	@kubectl apply -f $(HLAMP)/gitopshl.ingress.yaml
-	@kubectl create token my-headlamp --namespace kube-system
-
+	@helm install headlamp headlamp/headlamp --namespace kube-system
+	@kubectl apply -f $(HLAMP)/ingress.yaml
+	@kubectl create token headlamp --namespace kube-system || true
 
 portainer:
 	@docker volume create portainer_data
 	@docker run -d -p 8000:8000 -p 7443:9443 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:lts
-	
-  		 
-																						 
+																					
 
 
-
-
-
-# GITOPS
-
-registry: harbor testregistry
-
+# Registry
 harbor:
+	@echo "---------------------------------------"
+	@echo "Creating Registry"
+	@echo "---------------------------------------"
 	@helm install registry harbor/harbor --namespace harbor --create-namespace --set expose.type="clusterIP" --set expose.tls.enabled="false" --set registry.relativeurls="true" --set expose.clusterIP.name="harbor" --set expose.clusterIP.ports.httpPort="8080" --set externalURL="http://harbor.minikube.net:8080" --set harborAdminPassword="admin" --set registry.credentials.username="admin" --set registry.credentials.password="admin"
-	@ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i $$(minikube ssh-key) docker@$$(minikube ip) "sudo /bin/sh -c 'echo $$(kubectl -n devops get svc | grep -v '-' | awk '{print $3 "   harbor.devops.svc"}') >> /etc/hosts'"
 	@kubectl apply -f $(HARBOR)/ingress.yaml
-	@ssh -o UserKnownHostsFile=/dev/null     -o StrictHostKeyChecking=no     -i $(minikube ssh-key)     docker@$(minikube ip)     "sudo /bin/sh -c 'echo $(kubectl -n devops get svc | \
-                            grep -v '-' | \
-                            awk '{print $3 "   harbor.minikube.net"}') \
-                                >> /etc/hosts'"
-	@kubectl create secret docker-registry harbor --docker-server="harbor.minikube.net:8080" --docker-username="admin" --docker-password="admin"
+	@ssh -o UserKnownHostsFile=/dev/null  -o StrictHostKeyChecking=no   -i $$(minikube ssh-key) docker@$$(minikube ip)  "sudo /bin/sh -c 'echo $(kubectl -n devops get svc | grep -v '-' | awk '{print $3 "   harbor.minikube.net"}') >> /etc/hosts'"
+	@kubectl create secret docker-registry harbor --docker-server="harbor.minikube.net:8080" --docker-username="admin" --docker-password="admin" || true
 
 testregistry:
+	@echo "---------------------------------------"
+	@echo "Testing registry"
+	@echo "---------------------------------------"
 	@kubectl delete -f $(HARBOR)/testpod.yaml || true
 	@docker pull nginx:latest
 	@docker tag nginx:latest harbor.minikube.net/library/nginx:latest
@@ -128,6 +120,12 @@ testregistry:
 	@docker push harbor.minikube.net/library/nginx:latest
 	@kubectl apply -f $(HARBOR)/testpod.yaml
 	@kubectl get po
+
+browser: ## Open all ui forntends
+	@google-chrome http://harbor.minikube.net http://headlamp.minikube.net
+
+
+# Gitops
 
 gitea:
 	@helm install gitea gitea-charts/gitea -f $(GITEA)/custom-values.yaml -n gitea --create-namespace
@@ -140,7 +138,7 @@ awx:
 	@kubectl get secret awx-demo-admin-password -n awx -o jsonpath="{.data.password}" | base64 --decode 
 
 terrakube:
-	@kubectl create namespace terrakube | true
+	@kubectl create namespace terrakube || true
 	@export MYCERT=$(cat /home/luis/.local/share/mkcert/rootCA.pem) 
 	@yq -e '.security.caCerts."rootCA.pem"=strenv(MYCERT)' scripts/terrakube/template.yaml > $(TERRAKUBE)/values.yaml
 	@helm install terrakube terrakube-repo/terrakube -n terrakube --values $(TERRAKUBE)/values.yaml 
