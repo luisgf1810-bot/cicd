@@ -1,0 +1,3 @@
+admin:
+  create: true
+  password: admin

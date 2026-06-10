@@ -7,6 +7,8 @@ GITEA := scripts/gitea
 ARGOCD := scripts/argocd
 GITLAB := scripts/gitlab
 TERRAKUBE := scripts/terrakube
+SEMAPHOREUI := scripts/semaphoreui
+AWX := scripts/awx
 REGPORT := 12345
 TEST := test
 
@@ -33,19 +35,19 @@ clean: ## Destroys clusters
 	@minikube delete
 
 
+
 cluster: clean helmrepos createcluster management registry ## Create minikube cluster
 
 registry: harbor 
 
 management: headlamp portainer
 
-gitops: #gitea awx terrakube argocd ## Deploy gitops tools
+gitops: gitea argocd awx terrakube ## Deploy gitops tools
 
 
 
 # Cluster
 helmrepos:
-	@x-terminal-emulator -- bash -c "watch -n 2 kubectl get po --all-namespaces" &
 	@echo "---------------------------------------"
 	@echo "Update helm repos"
 	@echo "---------------------------------------"
@@ -55,7 +57,9 @@ helmrepos:
 	@helm repo add awx-operator https://ansible-community.github.io/awx-operator-helm/
 	@helm repo add argo https://argoproj.github.io/argo-helm
 	@helm repo add terrakube-repo https://charts.terrakube.io
+	@helm repo add semaphoreui https://semaphoreui.github.io/charts
 	@helm repo update
+
 
 createcluster:
 	@echo "---------------------------------------"
@@ -93,6 +97,8 @@ headlamp:
 	@kubectl apply -f $(HLAMP)/ingress.yaml
 	@kubectl create token headlamp --namespace kube-system || true
 
+
+
 portainer:
 	@docker volume create portainer_data
 	@docker run -d -p 8000:8000 -p 7443:9443 --name portainer --restart=always -v /var/run/docker.sock:/var/run/docker.sock -v portainer_data:/data portainer/portainer-ce:lts
@@ -109,6 +115,8 @@ harbor:
 	@ssh -o UserKnownHostsFile=/dev/null  -o StrictHostKeyChecking=no   -i $$(minikube ssh-key) docker@$$(minikube ip)  "sudo /bin/sh -c 'echo $(kubectl -n devops get svc | grep -v '-' | awk '{print $3 "   harbor.minikube.net"}') >> /etc/hosts'"
 	@kubectl create secret docker-registry harbor --docker-server="harbor.minikube.net:8080" --docker-username="admin" --docker-password="admin" || true
 
+
+
 testregistry:
 	@echo "---------------------------------------"
 	@echo "Testing registry"
@@ -121,27 +129,20 @@ testregistry:
 	@kubectl apply -f $(HARBOR)/testpod.yaml
 	@kubectl get po
 
+
+
 browser: ## Open all ui forntends
-	@google-chrome http://harbor.minikube.net http://headlamp.minikube.net
+	@x-terminal-emulator -- bash -c "google-chrome http://harbor.minikube.net http://headlamp.minikube.net http://gitea.minikube.net http://argocd.minikube.net http://awx.minikube.net" &
+
 
 
 # Gitops
-
 gitea:
 	@helm install gitea gitea-charts/gitea -f $(GITEA)/custom-values.yaml -n gitea --create-namespace
 	@kubectl apply -f $(GITEA)/ingress.yaml
-	@kubectl create secret docker-registry harbor --docker-server="harbor.devops.svc:8080" --docker-username="admin" --docker-password="admin"
 
-awx:
-	@helm install my-awx-operator awx-operator/awx-operator -n awx --create-namespace
-	@cd scripts/awx && kubectl apply -k .
-	@kubectl get secret awx-demo-admin-password -n awx -o jsonpath="{.data.password}" | base64 --decode 
 
-terrakube:
-	@kubectl create namespace terrakube || true
-	@export MYCERT=$(cat /home/luis/.local/share/mkcert/rootCA.pem) 
-	@yq -e '.security.caCerts."rootCA.pem"=strenv(MYCERT)' scripts/terrakube/template.yaml > $(TERRAKUBE)/values.yaml
-	@helm install terrakube terrakube-repo/terrakube -n terrakube --values $(TERRAKUBE)/values.yaml 
+
 
 argocd:
 	@helm install argocd argo/argo-cd -n argocd --create-namespace
@@ -151,7 +152,22 @@ argocd:
 	@kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
 
 
+awx:
+	@helm install my-awx-operator awx-operator/awx-operator -n awx --create-namespace
+	@cd scripts/awx && kubectl apply -k .
+	@kubectl get secret awx-demo-admin-password -n awx -o jsonpath="{.data.password}" | base64 --decode 
+	@kubectl apply -f $(AWX)/ingress.yaml 
 
+
+terrakube:
+	@kubectl create namespace terrakube || true
+	#@export MYCERT=$(cat $$HOME/.local/share/mkcert/rootCA.pem) 
+	#@yq -e '.security.caCerts."rootCA.pem"=strenv(MYCERT)' scripts/terrakube/template.yaml > $(TERRAKUBE)/values.yaml
+	@helm install terrakube terrakube-repo/terrakube -n terrakube --values $(TERRAKUBE)/values.yaml 
+
+
+semaphoreui:
+	@helm install semaphore semaphoreui/semaphore -n semaphoreui --create-namespace -f $(SEMAPHOREUI)/values.yaml
 	
 
 

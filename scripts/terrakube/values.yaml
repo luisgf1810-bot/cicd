@@ -1,32 +1,6 @@
 security:
   caCerts:
-    rootCA.pem: |-
-      -----BEGIN CERTIFICATE-----
-      MIIEcjCCAtqgAwIBAgIRALHY2rOUFnogBlXfq6jsQ8gwDQYJKoZIhvcNAQELBQAw
-      UTEeMBwGA1UEChMVbWtjZXJ0IGRldmVsb3BtZW50IENBMRMwEQYDVQQLDApsdWlz
-      QHBjZGV2MRowGAYDVQQDDBFta2NlcnQgbHVpc0BwY2RldjAeFw0yNjA2MDYxNzQx
-      MzBaFw0zNjA2MDYxNzQxMzBaMFExHjAcBgNVBAoTFW1rY2VydCBkZXZlbG9wbWVu
-      dCBDQTETMBEGA1UECwwKbHVpc0BwY2RldjEaMBgGA1UEAwwRbWtjZXJ0IGx1aXNA
-      cGNkZXYwggGiMA0GCSqGSIb3DQEBAQUAA4IBjwAwggGKAoIBgQDm0pB70esEq0Zo
-      +6HhIgIn/Iv+PJ5DJ+kHj7IjVF9zM+P6o0zHjXdmIwPC7Xlc3ViW0/3ltVM9hGt+
-      qfvBz3Ins9sMIdZ1yBaGY/UmvU6VQCsls8oZrEfVaCRtZfjuizf7Zn82AdHOtkUn
-      BRBm+kb3f5TofTzZPRLMRGdYVEsgvkVGwxOJ0enLMsxLNnekZcKvNSVEGh6GqPjn
-      Kk0mzomZGntf5bZ07wia0f0E86ho1cww7Qxk1DNxog3mxh4j1R//EfIy4mff0haF
-      GgJbtaVQ8YnBSQWEO5Cu6DEMlZ4SgkoqaYceeRSAhrBPqr9kWowX0NpH/9zmdfRq
-      sFEyyuQyT6m+4mUlIioUFnQtyz8ZTAh1CfiR9ePVVrrZ3BWrwQeJqZDDsNUyXBsU
-      won/xxk8VYvGmQME1QVBWQnS0l989zTDCkDXvOYmAP07kyuflWHT5bDsQt29mEPV
-      jDrtYVjTufRQ+huC9wYvv4z0LQ2eQ+tZTNTH+E+hlFp05nkuRBsCAwEAAaNFMEMw
-      DgYDVR0PAQH/BAQDAgIEMBIGA1UdEwEB/wQIMAYBAf8CAQAwHQYDVR0OBBYEFEBY
-      PEkHKgdl810UhjYK6xhVbegjMA0GCSqGSIb3DQEBCwUAA4IBgQACcmO6lTnKsgij
-      n00elUDFVUUjH588ryxUoD0i2dEzj4jDWWT8q+pjUwzbFCdEa9x/c0mMHmvpdLD1
-      RCBIb+BPClX9lkx8C4OlCmW5iE+tQ+bAZ+AKjv8gQ9mLnTQBOOmfJ3ZX08gMho6W
-      ymrCSkSZfS16Sx9zTvp5GWtE/sb+aJlRg+yWiCBhqAbNv4PoL9sKyNanOTkuqw/j
-      EbW0MDS2b+sG4epgOGRZAUPW7OK2y/BHn0+E9rK0lNa59Gsv0M5IbP4OQDvrhtR/
-      3ovl/+1h7xQn9Nf0sLdcnK9lscs9IvdIqJRY4ur3iYFgMd9UiJyUrqnLfM6LdDuO
-      gFc7phYU8BhAqVZQBf8WD2rzthUoSkgeLbUpdwrRzz31JZ6gjni/bG7eTmirYBVw
-      RGTk9M89stQIyw/QgoTKQh/S5CAKFC74j/bX9gSYZDnnWUCuM2fQZiZaAyVPYUJL
-      gvl9lcxXVZCstcR00l6w1S5W99kyXOKGls+oCKaeKg6Xpx0/3xI=
-      -----END CERTIFICATE-----
+    rootCA.pem: ""
 api:
   properties:
     databaseType: "H2"
