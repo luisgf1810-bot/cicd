@@ -18,11 +18,14 @@ TEST := test
 help: ## Usage: make <command> 
 	@egrep '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
-up: ## Starts k3s cluster
-	@k3d cluster start k3d --all
+cluster: clean helmrepos createcluster management registry ## Create minikube cluster
 
-down: ## Stops k3s cluster
-	@k3d cluster stop k3d --all
+gitops: gitea semaphoreui argocd  ## Deploy gitops tools
+
+gitopslegacy: gitea argocd awx terrakube ## Deploy gitops legacy tools
+
+browser: ## Open all ui forntends
+	@x-terminal-emulator -- bash -c "google-chrome http://headlamp.minikube.net http://harbor.minikube.net http://gitea.minikube.net http://argocd.minikube.net http://semaphoreui.minikube.net" &
 
 clean: ## Destroys clusters 
 	@echo "---------------------------------------"
@@ -35,15 +38,21 @@ clean: ## Destroys clusters
 	@minikube delete
 
 
-
-cluster: clean helmrepos createcluster management registry ## Create minikube cluster
+testregistry: ## Test registry 
+	@echo "---------------------------------------"
+	@echo "Testing registry"
+	@echo "---------------------------------------"
+	@kubectl delete -f $(HARBOR)/testpod.yaml || true
+	@docker pull nginx:latest
+	@docker tag nginx:latest harbor.minikube.net/library/nginx:latest
+	@docker login harbor.minikube.net -u admin -p admin
+	@docker push harbor.minikube.net/library/nginx:latest
+	@kubectl apply -f $(HARBOR)/testpod.yaml
+	@kubectl get po
 
 registry: harbor 
 
 management: headlamp portainer
-
-gitops: gitea argocd awx terrakube ## Deploy gitops tools
-
 
 
 # Cluster
@@ -117,23 +126,6 @@ harbor:
 
 
 
-testregistry:
-	@echo "---------------------------------------"
-	@echo "Testing registry"
-	@echo "---------------------------------------"
-	@kubectl delete -f $(HARBOR)/testpod.yaml || true
-	@docker pull nginx:latest
-	@docker tag nginx:latest harbor.minikube.net/library/nginx:latest
-	@docker login harbor.minikube.net -u admin -p admin
-	@docker push harbor.minikube.net/library/nginx:latest
-	@kubectl apply -f $(HARBOR)/testpod.yaml
-	@kubectl get po
-
-
-
-browser: ## Open all ui forntends
-	@x-terminal-emulator -- bash -c "google-chrome http://harbor.minikube.net http://headlamp.minikube.net http://gitea.minikube.net http://argocd.minikube.net http://awx.minikube.net" &
-
 
 
 # Gitops
@@ -168,6 +160,6 @@ terrakube:
 
 semaphoreui:
 	@helm install semaphore semaphoreui/semaphore -n semaphoreui --create-namespace -f $(SEMAPHOREUI)/values.yaml
-	
+	@kubectl apply -f $(SEMAPHOREUI)/ingress.yaml
 
 

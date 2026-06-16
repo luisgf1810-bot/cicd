@@ -103,7 +103,10 @@ podDisruptionBudget: {}
 
 ## @section Service
 service:
-  ## @param service.http.type Kubernetes service type for web traffic
+  ## @pt: git.example.com
+      paths:
+        - path: /
+  tls: []aram service.http.type Kubernetes service type for web traffic
   ## @param service.http.port Port number for web traffic
   ## @param service.http.clusterIP ClusterIP setting for http autosetup for deployment is None
   ## @param service.http.loadBalancerIP LoadBalancer IP setting
@@ -150,7 +153,10 @@ service:
     clusterIP: None
     loadBalancerIP:
     nodePort:
-    externalTrafficPolicy:
+    extt: git.example.com
+      paths:
+        - path: /
+  tls: []ernalTrafficPolicy:
     externalIPs:
     ipFamilyPolicy:
     ipFamilies:
@@ -206,7 +212,9 @@ route:
     key:
     certificate:
     caCertificate:
-    destinationCACertificate:
+    desttor: {}
+
+## @paraminationCACertificate:
 
 ## @section deployment
 #
@@ -322,7 +330,7 @@ preExtraInitContainers: []
 postExtraInitContainers: []
 # - name: post-init-container
 #   image: docker.io/library/busybox
-#   command: [ /bin/sh, -c, 'echo "Hello world! I am a post init container."' ]
+#   commaactionnd: [ /bin/sh, -c, 'echo "Hello world! I am a post init container."' ]
 
 ## @param extraVolumes Additional volumes to mount to the Gitea deployment
 extraVolumes: []
