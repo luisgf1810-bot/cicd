@@ -8,6 +8,7 @@ ARGOCD := scripts/argocd
 GITLAB := scripts/gitlab
 TERRAKUBE := scripts/terrakube
 SEMAPHOREUI := scripts/semaphoreui
+GITLAB := scripts/gitlab
 AWX := scripts/awx
 REGPORT := 12345
 TEST := test
@@ -20,16 +21,18 @@ help: ## Usage: make <command>
 
 cluster: clean helmrepos createcluster management registry ## Create minikube cluster
 
-gitops: gitea semaphoreui argocd  ## Deploy gitops tools
+gitopsgitlab: gitlab #semaphoreui argocd  ## Deploy gitops tools with gitlab
+
+gitopsgitea: gitea semaphoreui argocd  ## Deploy gitops tools with gitea
 
 gitopslegacy: gitea argocd awx terrakube ## Deploy gitops legacy tools
 
 browser: ## Open all ui forntends
-	@x-terminal-emulator -- bash -c "google-chrome http://headlamp.minikube.net http://harbor.minikube.net http://gitea.minikube.net http://argocd.minikube.net http://semaphoreui.minikube.net" &
+	@x-terminal-emulator -- bash -c "google-chrome http://headlamp.minikube.net http://harbor.minikube.net http://gitea.minikube.net https://argocd.minikube.net http://semaphoreui.minikube.net http://gitlab.minikube.net" &
 
 clean: ## Destroys clusters 
 	@echo "---------------------------------------"
-	@echo "Clean all"
+	@echo " Clean all"
 	@echo "---------------------------------------"
 	@docker rm -f portainer || true
 	@docker volume rm -f portainer_data || true
@@ -37,10 +40,18 @@ clean: ## Destroys clusters
 	@k3d cluster delete --all 
 	@minikube delete
 
+cleangitops: ## Destroys gitops tools
+	@echo "---------------------------------------"
+	@echo " Clean all"
+	@echo "---------------------------------------"
+	@helm uninstall gitea -n gitea || true
+	@helm uninstall argocd -n argocd || true
+	@helm uninstall semaphore -n semaphoreui || true
+	@docker compose -f $(GITLAB)/docker-compose.yaml down || true
 
 testregistry: ## Test registry 
 	@echo "---------------------------------------"
-	@echo "Testing registry"
+	@echo " Testing registry"
 	@echo "---------------------------------------"
 	@kubectl delete -f $(HARBOR)/testpod.yaml || true
 	@docker pull nginx:latest
@@ -58,7 +69,7 @@ management: headlamp portainer
 # Cluster
 helmrepos:
 	@echo "---------------------------------------"
-	@echo "Update helm repos"
+	@echo " Update helm repos"
 	@echo "---------------------------------------"
 	@helm repo add headlamp https://kubernetes-sigs.github.io/headlamp/
 	@helm repo add harbor https://helm.goharbor.io
@@ -98,10 +109,9 @@ createcluster:
 # Management
 headlamp:
 	@echo "---------------------------------------"
-	@echo "K8/Docker management tools"
+	@echo " K8/Docker management tools"
 	@echo "---------------------------------------"
 	@helm repo add headlamp https://kubernetes-sigs.github.io/headlamp/
-	@helm repo update
 	@helm install headlamp headlamp/headlamp --namespace kube-system
 	@kubectl apply -f $(HLAMP)/ingress.yaml
 	@kubectl create token headlamp --namespace kube-system || true
@@ -117,7 +127,7 @@ portainer:
 # Registry
 harbor:
 	@echo "---------------------------------------"
-	@echo "Creating Registry"
+	@echo " Creating Registry"
 	@echo "---------------------------------------"
 	@helm install registry harbor/harbor --namespace harbor --create-namespace --set expose.type="clusterIP" --set expose.tls.enabled="false" --set registry.relativeurls="true" --set expose.clusterIP.name="harbor" --set expose.clusterIP.ports.httpPort="8080" --set externalURL="http://harbor.minikube.net:8080" --set harborAdminPassword="admin" --set registry.credentials.username="admin" --set registry.credentials.password="admin"
 	@kubectl apply -f $(HARBOR)/ingress.yaml
@@ -130,10 +140,18 @@ harbor:
 
 # Gitops
 gitea:
-	@helm install gitea gitea-charts/gitea -f $(GITEA)/custom-values.yaml -n gitea --create-namespace
+	@echo "---------------------------------------"
+	@echo " Gitops tools with gitea"
+	@echo "---------------------------------------"
+	@helm install gitea gitea-charts/gitea -n gitea --create-namespace --set postgresql-ha.enabled=false --set valkey-cluster.enabled=false --set postgresql.enabled=true --set valkey.enabled=true
 	@kubectl apply -f $(GITEA)/ingress.yaml
 
 
+gitlab:
+	@echo "---------------------------------------"
+	@echo " Gitops tools with gitlab"
+	@echo "---------------------------------------"
+	@docker compose -f $(GITLAB)/docker-compose.yaml up -d || true
 
 
 argocd:
@@ -142,21 +160,6 @@ argocd:
 	@kubectl patch configmap argocd-cm -n argocd --type merge -p '{"data":{"url":"https://argocd.minikube.net"}}'
 	@kubectl apply -f $(ARGOCD)/ingress.yaml
 	@kubectl -n argocd get secret argocd-initial-admin-secret -o jsonpath="{.data.password}" | base64 -d
-
-
-awx:
-	@helm install my-awx-operator awx-operator/awx-operator -n awx --create-namespace
-	@cd scripts/awx && kubectl apply -k .
-	@kubectl get secret awx-demo-admin-password -n awx -o jsonpath="{.data.password}" | base64 --decode 
-	@kubectl apply -f $(AWX)/ingress.yaml 
-
-
-terrakube:
-	@kubectl create namespace terrakube || true
-	#@export MYCERT=$(cat $$HOME/.local/share/mkcert/rootCA.pem) 
-	#@yq -e '.security.caCerts."rootCA.pem"=strenv(MYCERT)' scripts/terrakube/template.yaml > $(TERRAKUBE)/values.yaml
-	@helm install terrakube terrakube-repo/terrakube -n terrakube --values $(TERRAKUBE)/values.yaml 
-
 
 semaphoreui:
 	@helm install semaphore semaphoreui/semaphore -n semaphoreui --create-namespace -f $(SEMAPHOREUI)/values.yaml

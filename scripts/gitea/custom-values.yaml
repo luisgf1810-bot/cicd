@@ -106,7 +106,7 @@ service:
   ## @pt: git.example.com
       paths:
         - path: /
-  tls: []aram service.http.type Kubernetes service type for web traffic
+  tls: []
   ## @param service.http.port Port number for web traffic
   ## @param service.http.clusterIP ClusterIP setting for http autosetup for deployment is None
   ## @param service.http.loadBalancerIP LoadBalancer IP setting
